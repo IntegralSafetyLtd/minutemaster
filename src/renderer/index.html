@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meeting Minutes Recorder</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Meeting Minutes Recorder</h1>
+      <p class="subtitle">AI-Powered Meeting Documentation</p>
+    </header>
+
+    <!-- Step 1: API Key Setup -->
+    <div id="step-api" class="step active">
+      <h2>Step 1: OpenAI API Configuration</h2>
+      <div class="form-group">
+        <label for="api-key">OpenAI API Key:</label>
+        <input type="password" id="api-key" placeholder="sk-...">
+        <button id="save-api-key" class="btn btn-primary">Save API Key</button>
+      </div>
+      <p class="info-text">Your API key is stored securely and only used for transcription and analysis.</p>
+    </div>
+
+    <!-- Step 2: Microphone Selection -->
+    <div id="step-microphone" class="step">
+      <h2>Step 2: Select Microphone(s)</h2>
+      <div id="microphone-list" class="microphone-list">
+        <!-- Microphones will be populated here -->
+      </div>
+      <button id="next-to-recording" class="btn btn-primary">Continue to Recording</button>
+    </div>
+
+    <!-- Step 3: Recording -->
+    <div id="step-recording" class="step">
+      <h2>Step 3: Record Meeting</h2>
+      <div class="recording-controls">
+        <div class="meeting-info">
+          <input type="text" id="meeting-title" placeholder="Meeting Title (optional)">
+        </div>
+        <div class="recording-status">
+          <div id="recording-indicator" class="recording-indicator"></div>
+          <span id="recording-time">00:00:00</span>
+        </div>
+        <div class="button-group">
+          <button id="start-recording" class="btn btn-success">Start Recording</button>
+          <button id="stop-recording" class="btn btn-danger" disabled>Stop Recording</button>
+        </div>
+      </div>
+      <div class="audio-level">
+        <canvas id="audio-visualizer" width="800" height="100"></canvas>
+      </div>
+    </div>
+
+    <!-- Step 4: Processing & Filtering -->
+    <div id="step-processing" class="step">
+      <h2>Step 4: Review & Filter Transcript</h2>
+      <div class="processing-status">
+        <div class="progress-container">
+          <div id="progress-bar" class="progress-bar"></div>
+        </div>
+        <p id="progress-text">Processing...</p>
+      </div>
+
+      <div id="transcript-review" class="transcript-review" style="display: none;">
+        <div class="filter-controls">
+          <button id="include-all" class="btn btn-secondary">Include All</button>
+          <button id="exclude-all" class="btn btn-secondary">Exclude All</button>
+          <button id="start-processing" class="btn btn-primary">Generate Minutes</button>
+        </div>
+
+        <div id="segments-list" class="segments-list">
+          <!-- Transcript segments will be populated here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5: Speaker Identification -->
+    <div id="step-speakers" class="step">
+      <h2>Step 5: Identify Speakers & Participants</h2>
+
+      <div class="participants-section">
+        <h3>Meeting Participants</h3>
+        <p class="info-text">Enter the names of all meeting participants (one per line):</p>
+        <textarea id="participants-list" rows="6" placeholder="John Smith&#10;Jane Doe&#10;Bob Johnson"></textarea>
+      </div>
+
+      <div class="speakers-section">
+        <h3>Speaker Identification</h3>
+        <p class="info-text">Review transcript segments below and assign speaker names. You can type a name or select from participants.</p>
+
+        <div id="speaker-segments" class="speaker-segments">
+          <!-- Speaker identification segments will be here -->
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button id="skip-speakers" class="btn btn-secondary">Skip Speaker Identification</button>
+        <button id="apply-speakers" class="btn btn-primary">Apply & Continue</button>
+      </div>
+    </div>
+
+    <!-- Step 6: Final Review & Export -->
+    <div id="step-export" class="step">
+      <h2>Step 6: Review & Export</h2>
+
+      <div class="export-options">
+        <h3>Document Settings</h3>
+        <div class="form-group">
+          <label for="document-title">Document Title:</label>
+          <input type="text" id="document-title" placeholder="Board Meeting">
+        </div>
+
+        <div class="form-group">
+          <label for="meeting-date">Meeting Date:</label>
+          <input type="date" id="meeting-date">
+        </div>
+
+        <div class="form-group">
+          <label>Export Format:</label>
+          <div class="format-options">
+            <label class="checkbox-label">
+              <input type="checkbox" id="export-word" checked> Word (.docx)
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="export-pdf"> PDF
+            </label>
+          </div>
+        </div>
+
+        <div id="pdf-password-section" class="form-group" style="display: none;">
+          <label for="pdf-password">PDF Password (optional):</label>
+          <input type="password" id="pdf-password" placeholder="Enter password for PDF protection">
+          <p class="info-text">If set, the PDF will be password-protected and read-only.</p>
+        </div>
+      </div>
+
+      <div class="summary-preview">
+        <h3>Executive Summary</h3>
+        <p id="summary-text"></p>
+
+        <h3>Key Points</h3>
+        <ul id="key-points-list"></ul>
+
+        <h3>Action Items</h3>
+        <div id="action-items-list"></div>
+
+        <h3>Topics Discussed</h3>
+        <div id="topics-list"></div>
+
+        <h3>Meeting Participants</h3>
+        <div id="participants-preview"></div>
+      </div>
+
+      <div class="button-group">
+        <button id="export-document" class="btn btn-success">Export Documents</button>
+        <button id="start-new" class="btn btn-secondary">Start New Meeting</button>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="navigation">
+      <button id="prev-step" class="btn btn-secondary" disabled>Previous</button>
+      <div class="step-indicator">
+        <span class="step-dot active" data-step="1"></span>
+        <span class="step-dot" data-step="2"></span>
+        <span class="step-dot" data-step="3"></span>
+        <span class="step-dot" data-step="4"></span>
+        <span class="step-dot" data-step="5"></span>
+        <span class="step-dot" data-step="6"></span>
+      </div>
+      <button id="next-step" class="btn btn-secondary" disabled>Next</button>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

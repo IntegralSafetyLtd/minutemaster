@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(npm install)",
+      "Bash(if not exist assets mkdir assets)",
+      "Bash(npm ls:*)",
+      "Bash(npm install:*)",
+      "Bash(node server.js:*)",
+      "Bash(nul)",
+      "Bash(npm run web:*)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
