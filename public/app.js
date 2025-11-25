@@ -2,7 +2,7 @@
 // This handles all UI interactions and communication with the backend API
 
 // Global state
-let currentStep = 1;
+let currentStep = 0; // Start at 0 for login screen
 let selectedMicrophones = []; // Changed to array for multiple mics
 let mediaRecorder = null;
 let audioChunks = [];
@@ -18,6 +18,12 @@ let transcriptSegments = [];
 let speakerAssignments = {};
 let participants = [];
 let audioStreams = []; // Store multiple streams
+let isAuthenticated = false;
+let currentUserEmail = null;
+let recordingMimeType = 'audio/webm'; // Store the actual MIME type used
+let audioFilePath = null; // Store audio file path for speaker extraction
+let detectedSpeakers = []; // Speakers detected from introductions
+let speakerSamples = []; // Audio samples for speaker identification
 
 // API Base URL
 const API_BASE = '';
@@ -49,8 +55,8 @@ function showStep(stepNumber) {
 }
 
 function getStepId(stepNumber) {
-  const steps = ['api', 'microphone', 'recording', 'processing', 'speakers', 'export'];
-  return steps[stepNumber - 1];
+  const steps = ['login-screen', 'api', 'microphone', 'recording', 'processing', 'speakers', 'export'];
+  return steps[stepNumber];
 }
 
 function updateNavigationButtons() {
@@ -61,22 +67,99 @@ function updateNavigationButtons() {
   // Next button is controlled by individual step logic
 }
 
+// Step 0: Login
+async function checkAuthStatus() {
+  try {
+    const response = await fetch(`${API_BASE}/api/auth/status`);
+    const data = await response.json();
+
+    if (data.success && data.authenticated) {
+      isAuthenticated = true;
+      currentUserEmail = data.email;
+      document.getElementById('login-user-info').textContent = `Logged in as: ${currentUserEmail}`;
+
+      // Skip to API key step
+      showStep(1);
+      checkApiKeyStatus();
+    }
+  } catch (error) {
+    console.error('Failed to check auth status:', error);
+  }
+}
+
+// Login handler function
+async function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+
+  if (!email || !password) {
+    alert('Please enter email and password');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      isAuthenticated = true;
+      currentUserEmail = data.email;
+
+      // Move to API key step
+      showStep(1);
+
+      // If user has API key, check and possibly skip to microphone
+      if (data.hasApiKey) {
+        checkApiKeyStatus();
+      }
+    } else {
+      alert(`Login failed: ${data.error}`);
+    }
+  } catch (error) {
+    alert(`Login error: ${error.message}`);
+  }
+}
+
+// Login button click
+document.getElementById('login-btn').addEventListener('click', handleLogin);
+
+// Email field: Enter key moves to password field
+document.getElementById('login-email').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('login-password').focus();
+  }
+});
+
+// Password field: Enter key triggers login
+document.getElementById('login-password').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    handleLogin();
+  }
+});
+
 // Step 1: API Key Setup
 async function checkApiKeyStatus() {
   try {
     const response = await fetch(`${API_BASE}/api/check-config`);
     const data = await response.json();
 
-    if (data.success && data.hasApiKey && data.isInitialized) {
-      // API key is already configured, show status and skip to step 2
+    if (data.success && data.hasApiKey) {
+      // API key is already configured, show status
       document.getElementById('api-key-status').style.display = 'block';
       document.getElementById('api-key-form').style.display = 'none';
-
-      // Auto-advance to microphone selection
-      setTimeout(() => {
-        showStep(2);
-        loadMicrophones();
-      }, 500);
+      document.getElementById('continue-with-api').style.display = 'inline-block';
+    } else {
+      // No API key, show the form
+      document.getElementById('api-key-status').style.display = 'none';
+      document.getElementById('api-key-form').style.display = 'block';
+      document.getElementById('continue-with-api').style.display = 'none';
     }
   } catch (error) {
     console.error('Failed to check API key status:', error);
@@ -121,8 +204,15 @@ document.getElementById('save-api-key').addEventListener('click', async () => {
 document.getElementById('change-api-key').addEventListener('click', () => {
   document.getElementById('api-key-status').style.display = 'none';
   document.getElementById('api-key-form').style.display = 'block';
+  document.getElementById('continue-with-api').style.display = 'none';
   document.getElementById('api-key').value = '';
   document.getElementById('api-key').focus();
+});
+
+document.getElementById('continue-with-api')?.addEventListener('click', () => {
+  // Continue to microphone selection with existing API key
+  showStep(2);
+  loadMicrophones();
 });
 
 // Step 2: Microphone Selection
@@ -230,8 +320,19 @@ async function startRecording() {
 
     // Setup recording with the mixed stream
     const mixedStream = destination.stream;
-    mediaRecorder = new MediaRecorder(mixedStream, { mimeType: 'audio/webm' });
+
+    // Try to use the best supported format
+    let mimeType = 'audio/webm;codecs=opus';
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = 'audio/webm';
+      console.warn('Opus codec not supported, falling back to default webm');
+    }
+
+    recordingMimeType = mimeType; // Store for later use
+    mediaRecorder = new MediaRecorder(mixedStream, { mimeType });
     audioChunks = [];
+
+    console.log('Recording with MIME type:', mimeType);
 
     mediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
@@ -346,12 +447,15 @@ async function handleRecordingComplete() {
   document.getElementById('progress-bar').style.width = '10%';
 
   try {
-    // Create audio blob
-    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+    // Create audio blob with the actual recording MIME type
+    const audioBlob = new Blob(audioChunks, { type: recordingMimeType });
+
+    // Determine file extension based on MIME type
+    const extension = recordingMimeType.includes('opus') ? 'opus' : 'webm';
 
     // Create form data
     const formData = new FormData();
-    formData.append('audio', audioBlob, 'recording.webm');
+    formData.append('audio', audioBlob, `recording.${extension}`);
 
     // Upload and transcribe
     document.getElementById('progress-text').textContent = 'Transcribing audio...';
@@ -370,9 +474,10 @@ async function handleRecordingComplete() {
 
     transcriptionData = transcribeData.transcription;
     transcriptSegments = transcriptionData.segments || [];
+    audioFilePath = transcribeData.audioFilePath; // Store for speaker extraction
 
     // Analyze transcript
-    document.getElementById('progress-text').textContent = 'Analyzing transcript...';
+    document.getElementById('progress-text').textContent = 'Analyzing transcript and detecting speakers...';
     document.getElementById('progress-bar').style.width = '60%';
 
     const analyzeResponse = await fetch(`${API_BASE}/api/analyze-transcript`, {
@@ -388,6 +493,7 @@ async function handleRecordingComplete() {
     }
 
     analysisData = analyzeData.analysis;
+    detectedSpeakers = analyzeData.detectedSpeakers || [];
 
     // Display transcript review
     document.getElementById('progress-text').textContent = 'Complete!';
@@ -496,40 +602,160 @@ document.getElementById('start-processing').addEventListener('click', async () =
 });
 
 // Step 5: Speaker Identification
-function displaySpeakerIdentification() {
+async function displaySpeakerIdentification() {
   const speakerSegments = document.getElementById('speaker-segments');
-  speakerSegments.innerHTML = '';
+  speakerSegments.innerHTML = '<p class="info-text">Loading speaker samples...</p>';
 
-  // Get selected segments
-  const selectedSegments = [];
-  document.querySelectorAll('.segment-checkbox').forEach((checkbox, index) => {
-    if (checkbox.checked && transcriptSegments[index]) {
-      selectedSegments.push({ ...transcriptSegments[index], originalIndex: index });
+  try {
+    // Get selected segments
+    const selectedSegments = [];
+    document.querySelectorAll('.segment-checkbox').forEach((checkbox, index) => {
+      if (checkbox.checked && transcriptSegments[index]) {
+        selectedSegments.push({ ...transcriptSegments[index], originalIndex: index });
+      }
+    });
+
+    // Extract speaker samples from audio
+    const sampleResponse = await fetch(`${API_BASE}/api/extract-speaker-snippets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        audioPath: audioFilePath,
+        segments: selectedSegments
+      })
+    });
+
+    const sampleData = await sampleResponse.json();
+
+    if (!sampleData.success) {
+      throw new Error(sampleData.error);
     }
-  });
 
-  selectedSegments.forEach((segment, index) => {
-    const segmentDiv = document.createElement('div');
-    segmentDiv.className = 'speaker-segment';
-    segmentDiv.innerHTML = `
-      <div class="speaker-segment-header">
-        <span class="segment-number">Segment ${index + 1}</span>
-        <span class="segment-time">${formatTime(segment.start)} - ${formatTime(segment.end)}</span>
-      </div>
-      <p class="segment-text">${segment.text}</p>
-      <div class="speaker-input-group">
-        <label for="speaker-${index}">Speaker:</label>
-        <input type="text" id="speaker-${index}" class="speaker-name-input"
-               placeholder="Enter speaker name..."
-               list="participants-datalist"
-               data-segment-index="${segment.originalIndex}">
-      </div>
+    speakerSamples = sampleData.speakerSamples;
+
+    // Display detected speakers from introductions
+    let detectedSpeakersHtml = '';
+    if (detectedSpeakers.length > 0) {
+      detectedSpeakersHtml = `
+        <div class="detected-speakers-notice">
+          <h4>✓ Detected Speaker Introductions:</h4>
+          <ul>
+            ${detectedSpeakers.map(s => `<li><strong>${s.name}</strong> (from segment ${s.segmentIndex})</li>`).join('')}
+          </ul>
+          <p class="info-text">These names will be automatically applied to matching voice patterns.</p>
+        </div>
+      `;
+    }
+
+    // Display speaker samples with audio players
+    speakerSegments.innerHTML = detectedSpeakersHtml + `
+      <p class="info-text" style="margin-bottom: 20px;">
+        Listen to each audio sample below and assign the speaker's name. Once identified,
+        their name will be automatically applied to all segments where they speak.
+      </p>
     `;
-    speakerSegments.appendChild(segmentDiv);
-  });
 
-  // Create datalist for autocomplete
-  updateParticipantsDatalist();
+    for (const sample of speakerSamples) {
+      const sampleDiv = document.createElement('div');
+      sampleDiv.className = 'speaker-sample-card';
+      sampleDiv.innerHTML = `
+        <div class="speaker-sample-header">
+          <span class="sample-number">Speaker Sample ${sample.sampleIndex + 1}</span>
+          <span class="sample-time">${formatTime(sample.startTime)} - ${formatTime(sample.endTime)}</span>
+        </div>
+        <div class="audio-player-container">
+          <audio id="audio-sample-${sample.sampleIndex}" controls preload="none" class="speaker-audio-player">
+            <source src="" type="audio/mpeg">
+            Your browser does not support the audio element.
+          </audio>
+          <button class="btn btn-secondary btn-small load-audio-btn" data-sample-index="${sample.sampleIndex}">
+            Load Audio Sample
+          </button>
+        </div>
+        <p class="sample-preview-text">"${sample.text}"</p>
+        <div class="speaker-input-group">
+          <label for="speaker-name-${sample.sampleIndex}">Speaker Name:</label>
+          <input type="text"
+                 id="speaker-name-${sample.sampleIndex}"
+                 class="speaker-name-input"
+                 placeholder="Enter speaker name..."
+                 list="participants-datalist"
+                 data-sample-index="${sample.sampleIndex}"
+                 data-segment-index="${sample.segmentIndex}">
+        </div>
+      `;
+      speakerSegments.appendChild(sampleDiv);
+
+      // Add load button event listener
+      const loadBtn = sampleDiv.querySelector('.load-audio-btn');
+      loadBtn.addEventListener('click', async () => {
+        await loadSpeakerAudio(sample.sampleIndex, sample.startTime, sample.endTime);
+      });
+    }
+
+    // Pre-fill detected speaker names if available
+    detectedSpeakers.forEach(detected => {
+      // Find the sample that corresponds to this segment
+      const matchingSample = speakerSamples.find(s => s.segmentIndex === detected.segmentIndex);
+      if (matchingSample) {
+        const input = document.getElementById(`speaker-name-${matchingSample.sampleIndex}`);
+        if (input) {
+          input.value = detected.name;
+        }
+      }
+    });
+
+    // Create datalist for autocomplete
+    updateParticipantsDatalist();
+
+  } catch (error) {
+    console.error('Speaker identification display error:', error);
+    speakerSegments.innerHTML = `<p class="error-text">Error loading speaker samples: ${error.message}</p>`;
+  }
+}
+
+// Load audio sample for speaker identification
+async function loadSpeakerAudio(sampleIndex, startTime, endTime) {
+  const loadBtn = document.querySelector(`[data-sample-index="${sampleIndex}"]`);
+  const audioElement = document.getElementById(`audio-sample-${sampleIndex}`);
+
+  try {
+    loadBtn.textContent = 'Loading...';
+    loadBtn.disabled = true;
+
+    const response = await fetch(`${API_BASE}/api/get-speaker-audio`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        audioFile: audioFilePath,
+        startTime,
+        endTime
+      })
+    });
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error);
+    }
+
+    // Set audio source
+    audioElement.src = data.audioData;
+    audioElement.load();
+
+    // Hide load button, show player
+    loadBtn.style.display = 'none';
+    audioElement.style.display = 'block';
+
+    // Auto-play
+    audioElement.play().catch(e => console.log('Autoplay prevented:', e));
+
+  } catch (error) {
+    console.error('Load speaker audio error:', error);
+    loadBtn.textContent = 'Error - Try Again';
+    loadBtn.disabled = false;
+    alert(`Failed to load audio: ${error.message}`);
+  }
 }
 
 document.getElementById('participants-list').addEventListener('input', () => {
@@ -570,13 +796,52 @@ document.getElementById('skip-speakers').addEventListener('click', () => {
 });
 
 document.getElementById('apply-speakers').addEventListener('click', () => {
-  // Collect speaker assignments
-  speakerAssignments = {};
+  // Collect speaker sample assignments
+  const speakerSampleMap = {};
   document.querySelectorAll('.speaker-name-input').forEach(input => {
+    const sampleIndex = parseInt(input.dataset.sampleIndex);
     const segmentIndex = parseInt(input.dataset.segmentIndex);
     const speakerName = input.value.trim() || 'Unknown Speaker';
-    speakerAssignments[segmentIndex] = speakerName;
+
+    speakerSampleMap[sampleIndex] = {
+      name: speakerName,
+      segmentIndex: segmentIndex
+    };
   });
+
+  // Apply automatic speaker mapping across all selected segments
+  speakerAssignments = {};
+
+  document.querySelectorAll('.segment-checkbox').forEach((checkbox, index) => {
+    if (checkbox.checked) {
+      let assignedSpeaker = 'Unknown Speaker';
+
+      // Find the closest speaker sample before this segment
+      let closestSample = null;
+      let closestDistance = Infinity;
+
+      speakerSamples.forEach((sample, sampleIdx) => {
+        const speakerInfo = speakerSampleMap[sampleIdx];
+        if (speakerInfo && transcriptSegments[index]) {
+          const timeDiff = Math.abs(transcriptSegments[index].start - sample.startTime);
+
+          // Prefer samples from the same general time period (within 60 seconds)
+          if (timeDiff < closestDistance && timeDiff < 60) {
+            closestDistance = timeDiff;
+            closestSample = speakerInfo;
+          }
+        }
+      });
+
+      if (closestSample) {
+        assignedSpeaker = closestSample.name;
+      }
+
+      speakerAssignments[index] = assignedSpeaker;
+    }
+  });
+
+  console.log('Speaker assignments:', speakerAssignments);
 
   showStep(6);
   displayFinalReview();
@@ -741,9 +1006,30 @@ document.getElementById('next-step').addEventListener('click', () => {
   }
 });
 
+// Password toggle functionality
+document.getElementById('toggle-password')?.addEventListener('click', function() {
+  const passwordInput = document.getElementById('login-password');
+  const eyeIcon = document.getElementById('eye-icon');
+
+  if (passwordInput.type === 'password') {
+    passwordInput.type = 'text';
+    // Change to eye-slash icon
+    eyeIcon.innerHTML = `
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+    `;
+  } else {
+    passwordInput.type = 'password';
+    // Change back to eye icon
+    eyeIcon.innerHTML = `
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+    `;
+  }
+});
+
 // Initialize app
 window.addEventListener('DOMContentLoaded', () => {
   console.log('Meeting Minutes Web App loaded');
-  showStep(1);
-  checkApiKeyStatus(); // Check if API key is already saved
+  showStep(0); // Start with login screen
+  checkAuthStatus(); // Check if user is already logged in
 });

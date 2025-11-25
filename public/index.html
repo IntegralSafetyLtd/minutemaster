@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meeting Minutes Recorder - Web App</title>
+  <title>MinuteMaster - AI Meeting Minutes Recorder</title>
+  <link rel="icon" type="image/jpeg" href="favicon.jpg">
+  <link rel="shortcut icon" type="image/jpeg" href="favicon.jpg">
+  <link rel="apple-touch-icon" href="favicon.jpg">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,11 +16,42 @@
       <p class="subtitle">AI-Powered Meeting Documentation</p>
     </header>
 
+    <!-- Login Screen -->
+    <div id="step-login-screen" class="step">
+      <h2>User Login</h2>
+      <div class="form-group">
+        <label for="login-email">Email:</label>
+        <input type="email" id="login-email" placeholder="john@example.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password:</label>
+        <div class="password-wrapper">
+          <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password">
+          <button type="button" class="password-toggle" id="toggle-password" aria-label="Toggle password visibility">
+            <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <button id="login-btn" class="btn btn-primary">Login</button>
+      <p class="info-text" style="margin-top: 20px;">
+        <span id="login-user-info"></span>
+      </p>
+    </div>
+
     <!-- Step 1: API Key Setup -->
-    <div id="step-api" class="step active">
+    <div id="step-api" class="step">
       <h2>Step 1: OpenAI API Configuration</h2>
-      <div id="api-key-status" class="info-text" style="display: none; margin-bottom: 15px;">
-        ✓ API key is already configured. <button id="change-api-key" class="btn-link">Change key</button>
+      <div id="api-key-status" style="display: none; margin-bottom: 20px;">
+        <div class="info-text" style="margin-bottom: 15px;">
+          ✓ API key is already configured and ready to use.
+        </div>
+        <div class="button-group" style="justify-content: flex-start;">
+          <button id="continue-with-api" class="btn btn-success" style="display: none;">Continue with Current API Key</button>
+          <button id="change-api-key" class="btn btn-secondary">Change API Key</button>
+        </div>
       </div>
       <div id="api-key-form">
         <div class="form-group">

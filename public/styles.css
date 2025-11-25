@@ -83,6 +83,7 @@ label {
 }
 
 input[type="text"],
+input[type="email"],
 input[type="password"],
 input[type="date"],
 textarea {
@@ -96,6 +97,7 @@ textarea {
 }
 
 input[type="text"]:focus,
+input[type="email"]:focus,
 input[type="password"]:focus,
 input[type="date"]:focus,
 textarea:focus {
@@ -577,6 +579,120 @@ textarea {
   background: #764ba2;
 }
 
+/* Detected Speakers Notice */
+.detected-speakers-notice {
+  background: #d1fae5;
+  border-left: 4px solid #10b981;
+  padding: 16px;
+  margin-bottom: 24px;
+  border-radius: 6px;
+}
+
+.detected-speakers-notice h4 {
+  color: #065f46;
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+
+.detected-speakers-notice ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 12px 0;
+}
+
+.detected-speakers-notice li {
+  padding: 6px 0;
+  color: #047857;
+}
+
+/* Speaker Sample Cards */
+.speaker-sample-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  transition: all 0.3s;
+}
+
+.speaker-sample-card:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.speaker-sample-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.sample-number {
+  font-weight: 600;
+  color: #374151;
+  font-size: 16px;
+}
+
+.sample-time {
+  color: #6b7280;
+  font-size: 14px;
+  font-family: monospace;
+}
+
+.audio-player-container {
+  margin: 16px 0;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.speaker-audio-player {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  display: none;
+}
+
+.load-audio-btn {
+  padding: 10px 20px;
+  font-size: 14px;
+}
+
+.btn-small {
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+.sample-preview-text {
+  color: #6b7280;
+  font-style: italic;
+  margin: 12px 0;
+  padding: 12px;
+  background: #f3f4f6;
+  border-left: 3px solid #9ca3af;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.speaker-input-group {
+  margin-top: 16px;
+}
+
+.speaker-input-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.speaker-input-group input {
+  width: 100%;
+  max-width: 400px;
+}
+
 /* Participants Section */
 .participants-section {
   margin-bottom: 30px;
@@ -683,4 +799,284 @@ textarea {
   font-size: 14px;
   color: #333;
   text-align: center;
+}
+
+/* Password Toggle */
+.password-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-wrapper input {
+  padding-right: 45px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  color: #666;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: #667eea;
+}
+
+.password-toggle svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN - Mobile & Tablet
+   ============================================ */
+
+/* Tablet and smaller (iPad portrait and below) */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
+  .container {
+    padding: 20px;
+    border-radius: 8px;
+  }
+
+  h1 {
+    font-size: 24px;
+  }
+
+  h2 {
+    font-size: 20px;
+  }
+
+  h3 {
+    font-size: 16px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  /* Make buttons full width on mobile */
+  .btn {
+    width: 100%;
+    margin: 8px 0;
+  }
+
+  .button-group {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .button-group .btn {
+    margin: 4px 0;
+  }
+
+  /* Adjust form inputs for mobile */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="date"] {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 14px;
+  }
+
+  /* Navigation buttons */
+  .navigation {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .navigation .btn {
+    width: 100%;
+  }
+
+  .step-indicator {
+    order: -1;
+    margin-bottom: 12px;
+  }
+
+  /* Recording controls */
+  .recording-status {
+    font-size: 20px;
+  }
+
+  .meeting-info input {
+    max-width: 100%;
+  }
+
+  /* Audio visualizer */
+  #audio-visualizer {
+    width: 100%;
+    height: 80px;
+  }
+
+  /* Microphone list */
+  .microphone-option {
+    padding: 12px;
+  }
+
+  /* Segments list */
+  .segments-list {
+    max-height: 400px;
+  }
+
+  .segment-item {
+    padding: 12px;
+  }
+
+  .segment-text {
+    margin-left: 0;
+    margin-top: 8px;
+  }
+
+  .segment-topic {
+    margin-left: 0;
+  }
+
+  /* Filter controls */
+  .filter-controls {
+    flex-direction: column;
+  }
+
+  .filter-controls .btn {
+    width: 100%;
+  }
+
+  /* Participants preview grid */
+  #participants-preview {
+    grid-template-columns: 1fr;
+  }
+
+  /* Speaker segments */
+  .speaker-segment-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .speaker-segment-header input,
+  .speaker-segment-header select {
+    max-width: 100%;
+  }
+
+  /* Export options */
+  .export-options {
+    padding: 16px;
+  }
+}
+
+/* Mobile phones (portrait) */
+@media (max-width: 480px) {
+  .container {
+    padding: 16px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  h2 {
+    font-size: 18px;
+  }
+
+  header {
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+  }
+
+  /* Smaller padding for mobile */
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  /* Recording time display */
+  .recording-status {
+    font-size: 18px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .recording-indicator {
+    margin-right: 0;
+    margin-bottom: 8px;
+  }
+
+  /* Smaller step dots */
+  .step-dot {
+    width: 10px;
+    height: 10px;
+  }
+
+  /* Action items spacing */
+  .action-item {
+    padding: 12px;
+  }
+
+  /* Topic items */
+  .topic-item {
+    padding: 12px;
+  }
+
+  /* Adjust checkbox sizes for easier tapping */
+  input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+  }
+
+  .checkbox-group input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Landscape mode adjustments */
+@media (max-width: 768px) and (orientation: landscape) {
+  #audio-visualizer {
+    height: 60px;
+  }
+
+  .segments-list {
+    max-height: 300px;
+  }
+
+  .speaker-segments {
+    max-height: 300px;
+  }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase tap targets for touch devices */
+  .btn {
+    min-height: 44px;
+    padding: 14px 24px;
+  }
+
+  .microphone-option,
+  .segment-item,
+  .speaker-segment-item {
+    min-height: 60px;
+  }
+
+  label {
+    cursor: default;
+  }
+
+  /* Disable hover effects on touch devices */
+  .btn-primary:hover:not(:disabled),
+  .btn-success:hover:not(:disabled),
+  .btn-danger:hover:not(:disabled) {
+    transform: none;
+  }
 }

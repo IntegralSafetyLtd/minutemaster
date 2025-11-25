@@ -1,0 +1,8 @@
+---
+# cPanel deployment configuration
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/yourusername/minutes
+    - /bin/cp -R * $DEPLOYPATH
+    - cd $DEPLOYPATH
+    - npm install --production
